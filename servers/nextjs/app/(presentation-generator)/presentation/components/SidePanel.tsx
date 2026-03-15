@@ -1,11 +1,10 @@
 "use client";
-import React, { useState } from "react";
-import { Plus } from "lucide-react";
-import { useDispatch, useSelector } from "react-redux";
+import { Separator } from "@/components/ui/separator";
+import { setPresentationData } from "@/store/slices/presentationGeneration";
 import { RootState } from "@/store/store";
 import {
-  DndContext,
   closestCenter,
+  DndContext,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -17,12 +16,13 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { setPresentationData } from "@/store/slices/presentationGeneration";
-import { SortableSlide } from "./SortableSlide";
-import SlideScale from "../../components/PresentationRender";
-import { Separator } from "@/components/ui/separator";
+import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import SlideScale from "../../components/PresentationRender";
 import NewSlide from "./NewSlide";
+import { SortableSlide } from "./SortableSlide";
 
 interface SidePanelProps {
   selectedSlide: number;
@@ -39,12 +39,11 @@ const SidePanel = ({
 
   loading,
 }: SidePanelProps) => {
-
   const router = useRouter();
   const [showNewSlideSelection, setShowNewSlideSelection] = useState(false);
 
   const { presentationData, isStreaming } = useSelector(
-    (state: RootState) => state.presentationGeneration
+    (state: RootState) => state.presentationGeneration,
   );
 
   const dispatch = useDispatch();
@@ -61,10 +60,6 @@ const SidePanel = ({
     setShowNewSlideSelection(true);
   };
 
-
-
-
-
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -73,10 +68,8 @@ const SidePanel = ({
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
-
-
 
   const handleDragEnd = (event: any) => {
     const { active, over } = event;
@@ -86,17 +79,17 @@ const SidePanel = ({
     if (active.id !== over.id) {
       // Find the indices of the dragged and target items
       const oldIndex = presentationData?.slides.findIndex(
-        (item: any) => item.id === active.id
+        (item: any) => item.id === active.id,
       );
       const newIndex = presentationData?.slides.findIndex(
-        (item: any) => item.id === over.id
+        (item: any) => item.id === over.id,
       );
 
       // Reorder the array
       const reorderedArray = arrayMove(
         presentationData?.slides,
         oldIndex,
-        newIndex
+        newIndex,
       );
 
       // Update indices of all slides
@@ -107,7 +100,7 @@ const SidePanel = ({
 
       // Update the store with new order and indices
       dispatch(
-        setPresentationData({ ...presentationData, slides: updatedArray })
+        setPresentationData({ ...presentationData, slides: updatedArray }),
       );
     }
   };
@@ -123,24 +116,14 @@ const SidePanel = ({
   }
 
   return (
-    <div className="bg-[#F6F6F9] pt-8 px-4 w-[200px]">
-
-      <img onClick={() => {
-        router.push("/dashboard");
-      }} src="/logo-with-bg.png" alt="" className="w-10 h-10 cursor-pointer object-contain" />
-
-      <Separator orientation="horizontal" className="my-6 " />
+    <div className="bg-[#F6F6F9] pt-8 px-4 w-[200px] h-full">
       <div
         className={`
           fixed xl:relative h-full z-50 xl:z-auto 
           transition-all duration-300 ease-in-out
         `}
       >
-        <div
-
-          className="w-full h-[calc(100vh-120px)]   hide-scrollbar overflow-hidden slide-theme "
-        >
-
+        <div className="w-full h-full hide-scrollbar overflow-hidden slide-theme ">
           <p className="text-xl font-normal pb-3.5 text-[#000000]">Slides</p>
 
           <DndContext
@@ -155,8 +138,11 @@ const SidePanel = ({
                   <div
                     key={`${slide.id}-${index}`}
                     onClick={() => onSlideClick(index)}
-                    className={` cursor-pointer ring-2   rounded-[12px] transition-all duration-200 ${selectedSlide === index ? ' ring-[#5141e5]' : 'ring-gray-200'
-                      }`}
+                    className={` cursor-pointer ring-2   rounded-[12px] transition-all duration-200 ${
+                      selectedSlide === index
+                        ? " ring-[#5141e5]"
+                        : "ring-gray-200"
+                    }`}
                   >
                     <div className=" bg-white pointer-events-none  relative overflow-hidden aspect-video">
                       <div className="absolute bg-gray-100/5 z-50  top-0 left-0 w-full h-full" />
@@ -169,25 +155,27 @@ const SidePanel = ({
               ) : (
                 <SortableContext
                   items={
-                    presentationData?.slides.map((slide: any) => slide.id || `${slide.index}`) || []
+                    presentationData?.slides.map(
+                      (slide: any) => slide.id || `${slide.index}`,
+                    ) || []
                   }
                   strategy={verticalListSortingStrategy}
                 >
                   {presentationData &&
-                    presentationData?.slides.map((slide: any, index: number) => (
-                      <SortableSlide
-                        key={`${slide.id}-${index}`}
-                        slide={slide}
-                        index={index}
-                        selectedSlide={selectedSlide}
-                        onSlideClick={onSlideClick}
-
-                      />
-                    ))}
+                    presentationData?.slides.map(
+                      (slide: any, index: number) => (
+                        <SortableSlide
+                          key={`${slide.id}-${index}`}
+                          slide={slide}
+                          index={index}
+                          selectedSlide={selectedSlide}
+                          onSlideClick={onSlideClick}
+                        />
+                      ),
+                    )}
                 </SortableContext>
               )}
             </div>
-
           </DndContext>
           <Separator orientation="horizontal" className=" " />
 
@@ -197,7 +185,9 @@ const SidePanel = ({
             className="pt-6 gap-2 flex flex-col py-2 duration-300 items-center justify-center rounded-lg cursor-pointer mx-auto"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span className="text-[11px] font-normal text-[#000000]">Add Slide</span>
+            <span className="text-[11px] font-normal text-[#000000]">
+              Add Slide
+            </span>
           </button>
         </div>
       </div>
