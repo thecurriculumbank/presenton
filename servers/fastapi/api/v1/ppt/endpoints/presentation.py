@@ -41,6 +41,7 @@ from utils.export_utils import export_presentation
 from utils.llm_calls.generate_presentation_outlines import generate_ppt_outline
 from models.sql.slide import SlideModel
 from models.sse_response import SSECompleteResponse, SSEErrorResponse, SSEResponse
+from pydantic import BaseModel
 
 from services.database import get_async_session
 from services.temp_file_service import TEMP_FILE_SERVICE
@@ -66,7 +67,8 @@ from utils.process_slides import (
     process_slide_and_fetch_assets,
 )
 import uuid
-
+import boto3
+from io import BytesIO
 
 PRESENTATION_ROUTER = APIRouter(prefix="/presentation", tags=["Presentation"])
 
@@ -408,23 +410,47 @@ async def update_presentation(
         slides=slides or [],
     )
 
+class ExportPptxRequest(BaseModel):
+    presentationData: PptxPresentationModel
+    presentation_id: str
 
 @PRESENTATION_ROUTER.post("/export/pptx", response_model=str)
 async def export_presentation_as_pptx(
-    pptx_model: Annotated[PptxPresentationModel, Body()],
+    request: Annotated[ExportPptxRequest, Body()],
 ):
+    pptx_model = request.presentationData
+    presentation_id = request.presentation_id
+    S3_BUCKET = os.environ.get("S3_BUCKET", "your-s3-bucket-name")
+    S3_PREFIX = os.environ.get("S3_PREFIX", "exports/")
+
+    print(f"Exporting presentation {pptx_model} as PPTX with ID '{presentation_id}'")
+    print(f"S3_BUCKET: {S3_BUCKET}, S3_PREFIX: {S3_PREFIX}")
+
     temp_dir = TEMP_FILE_SERVICE.create_temp_dir()
 
     pptx_creator = PptxPresentationCreator(pptx_model, temp_dir)
     await pptx_creator.create_ppt()
 
-    export_directory = get_exports_directory()
-    pptx_path = os.path.join(
-        export_directory, f"{pptx_model.name or uuid.uuid4()}.pptx"
-    )
-    pptx_creator.save(pptx_path)
+    # Save to BytesIO buffer
+    pptx_buffer = BytesIO()
+    print("Saving PPTX to buffer...")
+    pptx_creator._ppt.save(pptx_buffer)
+    print("PPTX saved to buffer, size")
+    pptx_buffer.seek(0)
+    print("Buffer seeked to start, uploading to S3...")
 
-    return pptx_path
+    # Upload to S3
+    s3 = boto3.client("s3")
+    s3_key = f"{S3_PREFIX}{presentation_id}.pptx"
+    print(f"Uploading PPTX to S3 at key: {s3_key}...")
+    s3.upload_fileobj(pptx_buffer, S3_BUCKET, s3_key)
+    print("PPTX uploaded to S3 successfully")
+
+
+    s3_url = f"s3://{S3_BUCKET}/{s3_key}"
+    print(f"PPTX uploaded to S3 successfully, URL: {s3_url}")
+
+    return s3_url
 
 
 @PRESENTATION_ROUTER.post("/export", response_model=PresentationPathAndEditPath)
