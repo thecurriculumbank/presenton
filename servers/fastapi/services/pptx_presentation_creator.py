@@ -610,7 +610,10 @@ class PptxPresentationCreator:
         font.name = font_model.name
         font.color.rgb = RGBColor.from_string(font_model.color)
         font.italic = font_model.italic
-        font.size = Pt(font_model.size)
+        if font_model.size and font_model.size > 0:
+            font.size = Pt(font_model.size)
+        else:
+            font.size = Pt(18)  # fallback default
         font.bold = font_model.font_weight >= 600
         if font_model.underline is not None:
             font.underline = bool(font_model.underline)
