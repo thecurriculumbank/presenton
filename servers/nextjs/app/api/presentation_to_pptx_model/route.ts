@@ -1,16 +1,16 @@
 import { ApiError } from "@/models/errors";
-import { NextRequest, NextResponse } from "next/server";
-import puppeteer, { Browser, ElementHandle, Page } from "puppeteer";
 import {
   ElementAttributes,
   SlideAttributesResult,
 } from "@/types/element_attibutes";
-import { convertElementAttributesToPptxSlides } from "@/utils/pptx_models_utils";
 import { PptxPresentationModel } from "@/types/pptx_models";
+import { convertElementAttributesToPptxSlides } from "@/utils/pptx_models_utils";
 import fs from "fs";
+import { NextRequest, NextResponse } from "next/server";
 import path from "path";
-import { v4 as uuidv4 } from "uuid";
+import puppeteer, { Browser, ElementHandle, Page } from "puppeteer";
 import sharp from "sharp";
+import { v4 as uuidv4 } from "uuid";
 
 interface GetAllChildElementsAttributesArgs {
   element: ElementHandle<Element>;
@@ -43,13 +43,17 @@ export async function GET(request: NextRequest) {
     await postProcessSlidesAttributes(
       slides_attributes,
       screenshotsDir,
-      speakerNotes
+      speakerNotes,
     );
     const slides_pptx_models =
       convertElementAttributesToPptxSlides(slides_attributes);
     const presentation_pptx_model: PptxPresentationModel = {
       slides: slides_pptx_models,
     };
+    console.log(
+      "🚀 ~ presentation_pptx_model:",
+      JSON.stringify(presentation_pptx_model),
+    );
 
     await closeBrowserAndPage(browser, page);
 
@@ -62,7 +66,7 @@ export async function GET(request: NextRequest) {
     }
     return NextResponse.json(
       { detail: `Internal server error: ${error.message}` },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -114,7 +118,7 @@ function getScreenshotsDir() {
   const tempDir = process.env.TEMP_DIRECTORY;
   if (!tempDir) {
     console.warn(
-      "TEMP_DIRECTORY environment variable not set, skipping screenshot"
+      "TEMP_DIRECTORY environment variable not set, skipping screenshot",
     );
     throw new ApiError("TEMP_DIRECTORY environment variable not set");
   }
@@ -128,7 +132,7 @@ function getScreenshotsDir() {
 async function postProcessSlidesAttributes(
   slidesAttributes: SlideAttributesResult[],
   screenshotsDir: string,
-  speakerNotes: string[]
+  speakerNotes: string[],
 ) {
   for (const [index, slideAttributes] of slidesAttributes.entries()) {
     for (const element of slideAttributes.elements) {
@@ -146,11 +150,11 @@ async function postProcessSlidesAttributes(
 
 async function screenshotElement(
   element: ElementAttributes,
-  screenshotsDir: string
+  screenshotsDir: string,
 ) {
   const screenshotPath = path.join(
     screenshotsDir,
-    `${uuidv4()}.png`
+    `${uuidv4()}.png`,
   ) as `${string}.png`;
 
   // For SVG elements, use convertSvgToPng
@@ -194,7 +198,7 @@ async function screenshotElement(
       };
     },
     element.opacity,
-    element.font?.color
+    element.font?.color,
   );
 
   const screenshot = await element.element?.screenshot({
@@ -227,7 +231,7 @@ const convertSvgToPng = async (element_attibutes: ElementAttributes) => {
   const pngBuffer = await sharp(svgBuffer)
     .resize(
       Math.round(element_attibutes.position!.width!),
-      Math.round(element_attibutes.position!.height!)
+      Math.round(element_attibutes.position!.height!),
     )
     .toFormat("png")
     .toBuffer();
@@ -236,12 +240,12 @@ const convertSvgToPng = async (element_attibutes: ElementAttributes) => {
 
 async function getSlidesAttributes(
   slides: ElementHandle<Element>[],
-  screenshotsDir: string
+  screenshotsDir: string,
 ): Promise<SlideAttributesResult[]> {
   const slideAttributes = await Promise.all(
     slides.map((slide) =>
-      getAllChildElementsAttributes({ element: slide, screenshotsDir })
-    )
+      getAllChildElementsAttributes({ element: slide, screenshotsDir }),
+    ),
   );
   return slideAttributes;
 }
@@ -264,7 +268,7 @@ async function getSlidesWrapper(page: Page): Promise<ElementHandle<Element>> {
 async function getSpeakerNotes(slides_wrapper: ElementHandle<Element>) {
   return await slides_wrapper.evaluate((el) => {
     return Array.from(el.querySelectorAll("[data-speaker-note]")).map(
-      (el) => el.getAttribute("data-speaker-note") || ""
+      (el) => el.getAttribute("data-speaker-note") || "",
     );
   });
 }
@@ -359,13 +363,13 @@ async function getAllChildElementsAttributes({
     if (attributes.tagName === "p") {
       const innerElementTagNames = await childElementHandle.evaluate((el) => {
         return Array.from(el.querySelectorAll("*")).map((e) =>
-          e.tagName.toLowerCase()
+          e.tagName.toLowerCase(),
         );
       });
 
       const allowedInlineTags = new Set(["strong", "u", "em", "code", "s"]);
       const hasOnlyAllowedInlineTags = innerElementTagNames.every((tag) =>
-        allowedInlineTags.has(tag)
+        allowedInlineTags.has(tag),
       );
 
       if (innerElementTagNames.length > 0 && hasOnlyAllowedInlineTags) {
@@ -408,7 +412,7 @@ async function getAllChildElementsAttributes({
       ...childResults.elements.map((attr) => ({
         attributes: attr,
         depth: depth + 1,
-      }))
+      })),
     );
   }
 
@@ -501,7 +505,7 @@ async function getAllChildElementsAttributes({
 }
 
 async function getElementAttributes(
-  element: ElementHandle<Element>
+  element: ElementHandle<Element>,
 ): Promise<ElementAttributes> {
   const attributes = await element.evaluate((el: Element) => {
     function colorToHex(color: string): {
@@ -970,7 +974,7 @@ async function getElementAttributes(
 
     function parseBorderRadius(
       computedStyles: CSSStyleDeclaration,
-      el: Element
+      el: Element,
     ) {
       const borderRadius = computedStyles.borderRadius;
       let borderRadiusValue;
@@ -1163,8 +1167,8 @@ async function getElementAttributes(
           el.className && typeof el.className === "string"
             ? el.className
             : el.className
-            ? el.className.toString()
-            : undefined,
+              ? el.className.toString()
+              : undefined,
         innerText: innerText,
         opacity: elementOpacity,
         background: background,
